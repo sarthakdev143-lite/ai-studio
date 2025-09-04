@@ -329,7 +329,7 @@ const GenerateSection: React.FC<GenerateSectionProps> = ({ canGenerate, generati
                                 <div>
                                     <p className="text-blue-400 font-medium mb-1">Ready to Generate?</p>
                                     <p className="text-blue-300 text-sm">
-                                        Make sure you've uploaded an image and entered a creative prompt.
+                                        Make sure you&apos;ve uploaded an image and entered a creative prompt.
                                         Our AI will transform your image based on your vision!
                                     </p>
                                 </div>

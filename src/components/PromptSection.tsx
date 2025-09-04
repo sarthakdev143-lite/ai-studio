@@ -167,7 +167,7 @@ const PromptSection: React.FC<PromptSectionProps> = ({
                                 <span className="text-purple-400 font-medium text-sm">Preview</span>
                             </div>
                             <p className="text-white/80 text-sm italic">
-                                "{prompt}"
+                                &quot;{prompt}&quot;
                             </p>
                         </div>
                     </FadeInUp>
