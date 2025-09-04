@@ -4,34 +4,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Send,
-  X,
-  Loader2
+  X
 } from 'lucide-react';
 
-// Import components (these would be separate files in a real project)
 import UploadSection from '@/components/UploadSection';
 import PromptSection from '@/components/PromptSection';
 import StyleSection from '@/components/StyleSection';
 import PreviewSection from '@/components/PreviewSection';
 import GenerateSection from '@/components/GenerateSection';
 import History from '@/components/History';
-
-// Types
-interface GenerationResult {
-  id: string;
-  imageUrl: string;
-  originalImageUrl: string;
-  prompt: string;
-  style: string;
-  createdAt: number;
-}
-
-interface GenerationState {
-  isLoading: boolean;
-  isAborted: boolean;
-  retryCount: number;
-  error: string | null;
-}
+import { GenerationResult, GenerationState } from './types';
 
 const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
@@ -41,8 +23,14 @@ const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=400&fit=crop'
 ];
 
-// Animatio@ Components
-const FadeInUp = ({ children, delay = 0, className = "" }) => {
+// Animation Components
+interface AnimationProps {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}
+
+const FadeInUp: React.FC<AnimationProps> = ({ children, delay = 0, className = "" }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -55,8 +43,8 @@ const FadeInUp = ({ children, delay = 0, className = "" }) => {
   return (
     <div
       className={`transition-all duration-700 ease-out ${isVisible
-          ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-8'
+        ? 'opacity-100 translate-y-0'
+        : 'opacity-0 translate-y-8'
         } ${className}`}
     >
       {children}
@@ -64,7 +52,7 @@ const FadeInUp = ({ children, delay = 0, className = "" }) => {
   );
 };
 
-const ScaleIn = ({ children, delay = 0, className = "" }) => {
+const ScaleIn: React.FC<AnimationProps> = ({ children, delay = 0, className = "" }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -77,8 +65,8 @@ const ScaleIn = ({ children, delay = 0, className = "" }) => {
   return (
     <div
       className={`transition-all duration-500 ease-out ${isVisible
-          ? 'opacity-100 scale-100'
-          : 'opacity-0 scale-95'
+        ? 'opacity-100 scale-100'
+        : 'opacity-0 scale-95'
         } ${className}`}
     >
       {children}
@@ -87,7 +75,7 @@ const ScaleIn = ({ children, delay = 0, className = "" }) => {
 };
 
 // Navigation Component
-const Navigation = () => (
+const Navigation: React.FC = () => (
   <nav className="w-full px-6 py-4 flex items-center justify-between backdrop-blur-lg bg-black/20 border-b border-white/10">
     <FadeInUp>
       <div className="flex items-center gap-2">
@@ -122,10 +110,14 @@ const Navigation = () => (
 );
 
 // Chat Interface Component
-const ChatInterface = ({ onPromptSubmit }) => {
+interface ChatInterfaceProps {
+  onPromptSubmit: (prompt: string) => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onPromptSubmit }) => {
   const [prompt, setPrompt] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim()) {
       onPromptSubmit(prompt.trim());
@@ -136,7 +128,7 @@ const ChatInterface = ({ onPromptSubmit }) => {
   return (
     <ScaleIn delay={400}>
       <div className="w-full max-w-4xl mx-auto px-4">
-        <form onSubmit={handleSubmit} className="relative">
+        <div onSubmit={handleSubmit} className="relative">
           <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-2xl p-4 shadow-2xl">
             <textarea
               value={prompt}
@@ -159,7 +151,8 @@ const ChatInterface = ({ onPromptSubmit }) => {
                   {500 - prompt.length} left
                 </span>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={!prompt.trim()}
                   className="p-3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-200 hover:scale-105 shadow-lg"
                 >
@@ -168,61 +161,27 @@ const ChatInterface = ({ onPromptSubmit }) => {
               </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </ScaleIn>
   );
 };
 
-// Workspace Section Component
-const WorkspaceSection = ({ title, children }) => (
-  <div className="mb-8">
-    <FadeInUp>
-      <div className="backdrop-blur-xl bg-black/20 border-b border-white/10 p-6 rounded-t-2xl">
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
-      </div>
-    </FadeInUp>
-    <div className="backdrop-blur-xl bg-black/10 border border-white/10 border-t-0 rounded-b-2xl p-6">
-      {children}
-    </div>
-  </div>
-);
+// Custom hooks - Remove localStorage and use in-memory storage
+const useInMemoryHistory = (maxItems = 5) => {
+  const [storedValue, setStoredValue] = useState<GenerationResult[]>([]);
 
-// Custom hooks
-const useLocalStorage = (key, initialValue, maxItems = 5) => {
-  const [storedValue, setStoredValue] = useState(initialValue);
-
-  useEffect(() => {
-    try {
-      const item = localStorage.getItem(key);
-      if (item) {
-        const parsedItem = JSON.parse(item);
-        setStoredValue(parsedItem.slice(0, maxItems));
-      }
-    } catch (error) {
-      console.error(`Failed to load ${key} from localStorage:`, error);
-    }
-  }, [key, maxItems]);
-
-  const setValue = (value) => {
-    try {
-      const valueToStore = typeof value === 'function' ? value(storedValue) : value;
-      const limitedValue = Array.isArray(valueToStore)
-        ? valueToStore.slice(0, maxItems)
-        : valueToStore;
-
-      setStoredValue(limitedValue);
-      localStorage.setItem(key, JSON.stringify(limitedValue));
-    } catch (error) {
-      console.error(`Failed to save ${key} to localStorage:`, error);
-    }
+  const setValue = (value: GenerationResult[] | ((prev: GenerationResult[]) => GenerationResult[])) => {
+    const valueToStore = typeof value === 'function' ? value(storedValue) : value;
+    const limitedValue = valueToStore.slice(0, maxItems);
+    setStoredValue(limitedValue);
   };
 
-  return [storedValue, setValue];
+  return [storedValue, setValue] as const;
 };
 
 // Generation API
-const mockGenerateAPI = async (imageUrl, prompt, style, retryCount = 0) => {
+const mockGenerateAPI = async (imageUrl: string, prompt: string, style: string, retryCount = 0): Promise<GenerationResult> => {
   return new Promise((resolve, reject) => {
     const delay = Math.min(1000 + (retryCount * 500), 3000);
 
@@ -249,28 +208,27 @@ const mockGenerateAPI = async (imageUrl, prompt, style, retryCount = 0) => {
 };
 
 // Main App Component
-const LovableAIStudio = () => {
+const LovableAIStudio: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState('');
   const [prompt, setPrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('editorial');
-  const [generationState, setGenerationState] = useState({
+  const [generationState, setGenerationState] = useState<GenerationState>({
     isLoading: false,
     isAborted: false,
     retryCount: 0,
     error: null
   });
-  const [selectedResult, setSelectedResult] = useState(null);
+  const [selectedResult, setSelectedResult] = useState<GenerationResult | null>(null);
   const [showWorkspace, setShowWorkspace] = useState(false);
 
-  const abortControllerRef = useRef(null);
-  const [history, setHistory] = useLocalStorage('ai-studio-history', [], 5);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [history, setHistory] = useInMemoryHistory(5);
 
-  const handlePromptSubmit = async (promptText) => {
+  const handlePromptSubmit = async (promptText: string) => {
     setPrompt(promptText);
     setShowWorkspace(true);
 
     if (!uploadedImage) {
-      // In a real app, you'd show an upload modal here
       setGenerationState({
         isLoading: false,
         isAborted: false,
@@ -297,7 +255,7 @@ const LovableAIStudio = () => {
     let currentRetry = 0;
     const maxRetries = 3;
 
-    const attemptGeneration = async () => {
+    const attemptGeneration = async (): Promise<void> => {
       try {
         const result = await mockGenerateAPI(uploadedImage, promptText, selectedStyle, currentRetry);
 
@@ -345,7 +303,7 @@ const LovableAIStudio = () => {
     setGenerationState(prev => ({ ...prev, isLoading: false, isAborted: true }));
   };
 
-  const loadHistoryItem = (item) => {
+  const loadHistoryItem = (item: GenerationResult) => {
     setUploadedImage(item.originalImageUrl);
     setPrompt(item.prompt);
     setSelectedStyle(item.style);

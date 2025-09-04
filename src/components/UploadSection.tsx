@@ -6,8 +6,13 @@ interface UploadSectionProps {
     onImageUpload: (imageUrl: string) => void;
 }
 
-// Animation Component
-const FadeInUp = ({ children, delay = 0, className = "" }) => {
+interface FadeInUpProps {
+    children: React.ReactNode;
+    delay?: number;
+    className?: string;
+}
+
+const FadeInUp: React.FC<FadeInUpProps> = ({ children, delay = 0, className = "" }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -29,7 +34,13 @@ const FadeInUp = ({ children, delay = 0, className = "" }) => {
     );
 };
 
-const ScaleIn = ({ children, delay = 0, className = "" }) => {
+interface ScaleInProps {
+    children: React.ReactNode;
+    delay?: number;
+    className?: string;
+}
+
+const ScaleIn: React.FC<ScaleInProps> = ({ children, delay = 0, className = "" }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
