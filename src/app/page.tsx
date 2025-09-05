@@ -5,6 +5,7 @@ import { Sparkles, X, Wand2, Loader2, ChevronDown, ImageIcon } from 'lucide-reac
 import { GenerationResult, GenerationState } from './types';
 import { useLocalStorageHistory } from "@/hooks/useLocalStorageHistory";
 import { downscaleImage } from "@/utils/downscaleImage";
+import Footer from '@/components/Footer';
 
 const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
@@ -599,7 +600,8 @@ const LovableAIStudio: React.FC = () => {
               </div>
             </div>
           )}
-        </main>
+        </main> 
+        <Footer />
       </div>
     </div>
   );
