@@ -7,26 +7,30 @@ import ImageUpload from "./ImageUpload";
 import StyleSelector from "./StyleSelector";
 import GenerationStatus from "./GenerationStatus";
 
+// Define types for speech recognition events
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
+}
+
 declare global {
     interface Window {
-        SpeechRecognition?: any;
-        webkitSpeechRecognition?: any;
+        SpeechRecognition?: typeof SpeechRecognition;
+        webkitSpeechRecognition?: typeof SpeechRecognition;
     }
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
-    onGenerate,
-    isGenerating,
-    generationState,
-    onAbort,
-}) => {
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating, generationState, onAbort, }) => {
     const [prompt, setPrompt] = useState("");
     const [uploadedImage, setUploadedImage] = useState("");
     const [selectedStyle, setSelectedStyle] = useState("editorial");
     const [showStyleSelector, setShowStyleSelector] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [isListening, setIsListening] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -34,7 +38,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     // Check if speech recognition is supported
     useEffect(() => {
-        const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             setSpeechSupported(true);
             recognitionRef.current = new SpeechRecognition();
@@ -42,9 +46,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             recognitionRef.current.interimResults = true;
             recognitionRef.current.lang = 'en-US';
 
-            recognitionRef.current.onresult = (event: any) => {
+            recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
                 const transcript = Array.from(event.results)
-                    .map((result: any) => result[0])
+                    .map((result) => result[0])
                     .map(result => result.transcript)
                     .join('');
                 setPrompt(prev => prev + transcript);
@@ -54,10 +58,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 setIsListening(false);
             };
 
-            recognitionRef.current.onerror = (event: any) => {
+            recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
                 console.error('Speech recognition error', event.error);
                 setIsListening(false);
-                // Show user-friendly error message
                 if (event.error === 'network') {
                     alert('Speech recognition requires an internet connection. Please check your connection and try again.');
                 }
@@ -232,8 +235,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                 id="prompt"
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                onFocus={() => setIsFocused(true)}
-                                onBlur={() => setIsFocused(false)}
                                 placeholder={
                                     uploadedImage
                                         ? "Describe how you want to transform your image..."
