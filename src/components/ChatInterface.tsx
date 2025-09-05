@@ -88,12 +88,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
         }
 
         if (isListening) {
-            recognitionRef.current.stop();
+            recognitionRef.current?.stop(); // Add optional chaining
             setIsListening(false);
         } else {
             try {
                 setPrompt(prev => prev + ' '); // Add space for new words
-                recognitionRef.current.start();
+                recognitionRef.current?.start(); // Add optional chaining
                 setIsListening(true);
             } catch (error) {
                 console.error('Speech recognition start failed', error);
