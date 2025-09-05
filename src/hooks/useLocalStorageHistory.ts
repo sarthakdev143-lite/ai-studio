@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GenerationResult } from "@/app/types";
+import { GenerationResult } from "@/types";
 
 export const useLocalStorageHistory = (key: string, maxItems = 5) => {
     const [history, setHistory] = useState<GenerationResult[]>([]);
