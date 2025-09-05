@@ -47,6 +47,7 @@ export interface ImageUploadProps {
 
 export interface GenerationStatusProps {
     generationState: GenerationState;
+    canceled: boolean; 
 }
 
 export interface GenerationResultProps {

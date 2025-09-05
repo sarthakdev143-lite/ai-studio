@@ -30,6 +30,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
     const [selectedStyle, setSelectedStyle] = useState("editorial");
     const [showStyleSelector, setShowStyleSelector] = useState(false);
     const [dragActive, setDragActive] = useState(false);
+    const [canceled, setCanceled] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,13 +103,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
         }
     };
 
-    const clearPrompt = () => {
-        setPrompt("");
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-        }
-    };
-
     const clearUploadedImage = () => {
         setUploadedImage("");
         if (fileInputRef.current) {
@@ -118,6 +112,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setCanceled(false); // Reset canceled state on new submission
         if (prompt.trim() && uploadedImage) {
             onGenerate({
                 prompt: prompt.trim(),
@@ -170,6 +165,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
+    };
+
+    const handleAbort = () => {
+        setCanceled(true);
+        onAbort();
     };
 
     const canGenerate = prompt.trim() && uploadedImage && !isGenerating;
@@ -274,7 +274,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
                                 {isGenerating ? (
                                     <button
                                         type="button"
-                                        onClick={onAbort}
+                                        onClick={handleAbort}
                                         className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                                         aria-label="Cancel generation"
                                     >
@@ -299,7 +299,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
                                         <span>Generate</span>
                                     </button>
                                 )}
-                                <GenerationStatus generationState={generationState} />
+                                <GenerationStatus generationState={generationState} canceled={canceled} />
                             </div>
                         </div>
                     </div>
