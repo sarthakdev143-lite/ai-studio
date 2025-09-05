@@ -133,10 +133,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
             fileInputRef.current.value = "";
         }
         setDragActive(false);
-
-        document.getElementById("history-section")?.scrollIntoView({
-            behavior: "smooth",
-        });
     };
 
     const handleFileUpload = async (file: File) => {
@@ -240,7 +236,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
                                         ? "Describe how you want to transform your image..."
                                         : "Upload an image and describe your vision..."
                                 }
-                                className="w-full text-white placeholder-white/60 resize-none outline-none text-lg bg-transparent py-2 max-h-40"
+                                className="w-full text-white placeholder-white/60 resize-none outline-none text-lg bg-transparent max-h-40 focus:bg-white/10 rounded-lg px-3 py-2"
                                 maxLength={500}
                                 aria-label="Describe your vision"
                                 rows={1}
@@ -249,7 +245,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
 
                             {/* Character Counter */}
                             {prompt.length > 0 && (
-                                <div className="absolute bottom-1 right-2 text-xs text-white/60">
+                                <div className="absolute -bottom-3 right-2 text-xs text-white/60">
                                     {prompt.length}/500
                                 </div>
                             )}

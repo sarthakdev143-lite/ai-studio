@@ -14,10 +14,10 @@ import HistoryItem from '@/components/HistoryItem';
 // Generation API
 const mockGenerateAPI = async (imageUrl: string, prompt: string, style: string, retryCount = 0): Promise<GenerationResult> => {
   return new Promise((resolve, reject) => {
-    const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+    const delay = Math.min(3000 * Math.pow(2, retryCount), 8000);
 
     setTimeout(() => {
-      const shouldFail = Math.random() < 0.2;
+      const shouldFail = Math.random() < 0.5;
 
       if (shouldFail && retryCount < 3) {
         reject(new Error('Model overloaded'));
@@ -35,6 +35,12 @@ const mockGenerateAPI = async (imageUrl: string, prompt: string, style: string, 
         });
       }
     }, delay);
+
+    setTimeout(() => {
+      document.getElementById("history-section")?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, delay + 100);
   });
 };
 
