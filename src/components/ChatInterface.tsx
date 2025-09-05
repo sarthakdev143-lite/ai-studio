@@ -34,7 +34,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
     const [speechSupported, setSpeechSupported] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const recognitionRef = useRef<any>(null);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
 
     // Check if speech recognition is supported
     useEffect(() => {
