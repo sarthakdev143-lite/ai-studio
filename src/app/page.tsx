@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Upload, X, Wand2, Loader2, ChevronDown, ImageIcon } from 'lucide-react';
+import { Sparkles, X, Wand2, Loader2, ChevronDown, ImageIcon } from 'lucide-react';
 import { GenerationResult, GenerationState } from './types';
+import { useLocalStorageHistory } from "@/hooks/useLocalStorageHistory";
+import { downscaleImage } from "@/utils/downscaleImage";
 
 const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
@@ -139,15 +141,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
         style: selectedStyle
       });
     }
+    setPrompt('');
+    clearUploadedImage();
+    setSelectedStyle('editorial');
+    setShowStyleSelector(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // reset file input
+    }
+    setDragActive(false);
+
+    // 👇 scroll to "Your Creations"
+    document.getElementById("history-section")?.scrollIntoView({
+      behavior: "smooth",
+    });
   };
 
-  const handleFileUpload = (file: File) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleFileUpload = async (file: File) => {
+    console.log("handleFileUpload:", file);
+    if (file && file.type.startsWith("image/")) {
+      if (file.size > 10 * 1024 * 1024) {
+        console.log("File too large (max 10MB)");
+        alert("File too large (max 10MB)");
+        return;
+      }
+
+      try {
+        console.log("Compressing and downsizing image...");
+        // 👇 compress & downscale before setting state
+        const resizedDataUrl = await downscaleImage(file, 1920);
+        console.log("Setting resized image:", resizedDataUrl);
+        setUploadedImage(resizedDataUrl);
+      } catch (err) {
+        console.error("Error resizing image:", err);
+      }
     }
   };
 
@@ -356,19 +382,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
   );
 };
 
-// Custom hooks - Remove localStorage and use in-memory storage
-const useInMemoryHistory = (maxItems = 5) => {
-  const [storedValue, setStoredValue] = useState<GenerationResult[]>([]);
-
-  const setValue = (value: GenerationResult[] | ((prev: GenerationResult[]) => GenerationResult[])) => {
-    const valueToStore = typeof value === 'function' ? value(storedValue) : value;
-    const limitedValue = valueToStore.slice(0, maxItems);
-    setStoredValue(limitedValue);
-  };
-
-  return [storedValue, setValue] as const;
-};
-
 // Generation API
 const mockGenerateAPI = async (imageUrl: string, prompt: string, style: string, retryCount = 0): Promise<GenerationResult> => {
   return new Promise((resolve, reject) => {
@@ -407,7 +420,7 @@ const LovableAIStudio: React.FC = () => {
   const [selectedResult, setSelectedResult] = useState<GenerationResult | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [history, setHistory] = useInMemoryHistory(5);
+  const { history, addToHistory, setHistory } = useLocalStorageHistory("ai-history", 5);
 
   const handleGenerate = async (data: { prompt: string; image: string; style: string }) => {
     abortControllerRef.current = new AbortController();
@@ -426,8 +439,7 @@ const LovableAIStudio: React.FC = () => {
         const result = await mockGenerateAPI(data.image, data.prompt, data.style, currentRetry);
 
         if (!abortControllerRef.current?.signal.aborted) {
-          const newHistory = [result, ...history];
-          setHistory(newHistory);
+          addToHistory(result);
           setSelectedResult(result);
           setGenerationState({
             isLoading: false,
@@ -507,42 +519,44 @@ const LovableAIStudio: React.FC = () => {
           />
 
           {/* Results Section */}
-          {selectedResult && (
-            <div className="mt-16 max-w-4xl mx-auto">
-              <FadeInUp delay={300}>
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-4">Your Creation</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">Original</h3>
-                      <img
-                        src={selectedResult.originalImageUrl}
-                        alt="Original"
-                        className="w-full aspect-square object-cover rounded-xl shadow-lg"
-                      />
+          <section id="history-section" className="scroll-mt-32">
+            {selectedResult && (
+              <div className="mt-16 max-w-4xl mx-auto">
+                <FadeInUp delay={300}>
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-4">Your Creation</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Original</h3>
+                        <img
+                          src={selectedResult.originalImageUrl}
+                          alt="Original"
+                          className="w-full aspect-square object-cover rounded-xl shadow-lg"
+                        />
+                      </div>
+                      <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Generated</h3>
+                        <img
+                          src={selectedResult.imageUrl}
+                          alt="Generated"
+                          className="w-full aspect-square object-cover rounded-xl shadow-lg"
+                        />
+                      </div>
                     </div>
-                    <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">Generated</h3>
-                      <img
-                        src={selectedResult.imageUrl}
-                        alt="Generated"
-                        className="w-full aspect-square object-cover rounded-xl shadow-lg"
-                      />
+                    <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
+                      <p className="text-white/80 italic">&quot;{selectedResult.prompt}&quot;</p>
+                      <div className="flex items-center justify-center gap-4 mt-2">
+                        <span className="text-purple-400 text-sm">Style: {selectedResult.style}</span>
+                        <span className="text-white/60 text-sm">
+                          {new Date(selectedResult.createdAt).toLocaleTimeString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
-                    <p className="text-white/80 italic">&quot;{selectedResult.prompt}&quot;</p>
-                    <div className="flex items-center justify-center gap-4 mt-2">
-                      <span className="text-purple-400 text-sm">Style: {selectedResult.style}</span>
-                      <span className="text-white/60 text-sm">
-                        {new Date(selectedResult.createdAt).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </FadeInUp>
-            </div>
-          )}
+                </FadeInUp>
+              </div>
+            )}
+          </section>
 
           {/* History Grid */}
           {history.length > 0 && (
