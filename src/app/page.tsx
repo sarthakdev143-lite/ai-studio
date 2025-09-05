@@ -1,18 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Sparkles,
-  Send,
-  X
-} from 'lucide-react';
-
-import UploadSection from '@/components/UploadSection';
-import PromptSection from '@/components/PromptSection';
-import StyleSection from '@/components/StyleSection';
-import PreviewSection from '@/components/PreviewSection';
-import GenerateSection from '@/components/GenerateSection';
-import History from '@/components/History';
+import { Sparkles, Upload, X, Wand2, Loader2, ChevronDown, ImageIcon } from 'lucide-react';
 import { GenerationResult, GenerationState } from './types';
 
 const MOCK_IMAGES = [
@@ -21,6 +10,15 @@ const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop',
   'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&h=400&fit=crop',
   'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=400&fit=crop'
+];
+
+const STYLE_OPTIONS_MINI = [
+  { value: 'editorial', label: 'Editorial', emoji: '📰' },
+  { value: 'streetwear', label: 'Streetwear', emoji: '🎨' },
+  { value: 'vintage', label: 'Vintage', emoji: '📸' },
+  { value: 'minimalist', label: 'Minimalist', emoji: '✨' },
+  { value: 'cyberpunk', label: 'Cyberpunk', emoji: '🌃' },
+  { value: 'watercolor', label: 'Watercolor', emoji: '🖌️' }
 ];
 
 // Animation Components
@@ -109,58 +107,228 @@ const Navigation: React.FC = () => (
   </nav>
 );
 
-// Chat Interface Component
+// All-in-One Chat Interface Component
 interface ChatInterfaceProps {
-  onPromptSubmit: (prompt: string) => void;
+  onGenerate: (data: { prompt: string; image: string; style: string }) => void;
+  isGenerating: boolean;
+  generationState: GenerationState;
+  onAbort: () => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onPromptSubmit }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating, generationState, onAbort }) => {
   const [prompt, setPrompt] = useState('');
+  const [uploadedImage, setUploadedImage] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('editorial');
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim()) {
-      onPromptSubmit(prompt.trim());
-      setPrompt('');
+    if (prompt.trim() && uploadedImage) {
+      onGenerate({
+        prompt: prompt.trim(),
+        image: uploadedImage,
+        style: selectedStyle
+      });
     }
   };
 
+  const handleFileUpload = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) handleFileUpload(imageFile);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const canGenerate = prompt.trim() && uploadedImage && !isGenerating;
+
   return (
     <ScaleIn delay={400}>
-      <div className="w-full max-w-4xl mx-auto px-4">
-        <div onSubmit={handleSubmit} className="relative">
-          <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-2xl p-4 shadow-2xl">
+      <div className="w-full max-w-5xl mx-auto px-4">
+        <div
+          className={`relative backdrop-blur-xl bg-black/30 border-2 rounded-3xl p-6 shadow-2xl transition-all duration-300 ${dragActive ? 'border-orange-500 bg-orange-500/10 scale-[1.02]' : 'border-white/20 hover:border-white/30'
+            }`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          {/* Image Upload Section */}
+          {uploadedImage && (
+            <div className="mb-4 relative group">
+              <img
+                src={uploadedImage}
+                alt="Uploaded preview"
+                className="h-32 w-32 object-cover rounded-xl shadow-lg mx-auto"
+              />
+              <button
+                onClick={() => setUploadedImage('')}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileUpload(file);
+            }}
+            className="hidden"
+          />
+
+          {/* Main Textarea */}
+          <div className="relative">
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask AI Studio to create amazing image transformations..."
-              className="w-full bg-transparent text-white placeholder-white/60 resize-none outline-none text-lg min-h-[60px] max-h-[200px]"
-              rows={3}
+              placeholder={uploadedImage
+                ? "Describe how you want to transform your image..."
+                : "Upload an image and describe your vision..."}
+              className="w-full bg-transparent text-white placeholder-white/60 resize-none outline-none text-lg min-h-[80px] max-h-[200px]"
+              rows={4}
               maxLength={500}
             />
 
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-3">
-                <span className="text-white/60 text-sm">
-                  Ready to create something amazing?
-                </span>
-              </div>
+            {/* Image Upload Button (when no image) */}
+            {!uploadedImage && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group"
+                title="Upload Image"
+              >
+                <ImageIcon className="w-5 h-5 text-white/70 group-hover:text-white" />
+              </button>
+            )}
+          </div>
 
+          {/* Generation Status */}
+          {generationState.isLoading && (
+            <div className="mb-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
               <div className="flex items-center gap-3">
-                <span className="text-white/60 text-sm">
-                  {500 - prompt.length} left
-                </span>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!prompt.trim()}
-                  className="p-3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-200 hover:scale-105 shadow-lg"
-                >
-                  <Send className="w-5 h-5 text-white" />
-                </button>
+                <div className="animate-spin">
+                  <Loader2 className="w-5 h-5 text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-orange-400 font-medium">Generating Your Masterpiece...</p>
+                  {generationState.retryCount > 0 && (
+                    <p className="text-orange-300 text-sm">Retrying... ({generationState.retryCount}/3)</p>
+                  )}
+                </div>
               </div>
             </div>
+          )}
+
+          {generationState.error && (
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <p className="text-red-400 font-medium">Generation Failed</p>
+              <p className="text-red-300 text-sm">{generationState.error}</p>
+            </div>
+          )}
+
+          {/* Bottom Controls */}
+          <div className="flex items-center justify-between">
+            {/* Style Selector */}
+            <div className="mt-4 mb-4">
+              <button
+                onClick={() => setShowStyleSelector(!showStyleSelector)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
+              >
+                <span className="text-lg">
+                  {STYLE_OPTIONS_MINI.find(s => s.value === selectedStyle)?.emoji}
+                </span>
+                <span>{STYLE_OPTIONS_MINI.find(s => s.value === selectedStyle)?.label} Style</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showStyleSelector ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showStyleSelector && (
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 p-4 bg-black/20 rounded-xl border border-white/10">
+                  {STYLE_OPTIONS_MINI.map((style) => (
+                    <button
+                      key={style.value}
+                      onClick={() => {
+                        setSelectedStyle(style.value);
+                        setShowStyleSelector(false);
+                      }}
+                      className={`p-3 rounded-lg text-sm transition-all duration-200 ${selectedStyle === style.value
+                        ? 'bg-orange-500 text-white scale-105'
+                        : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white'
+                        }`}
+                    >
+                      <div className="text-lg mb-1">{style.emoji}</div>
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-white/60 text-sm">
+                {500 - prompt.length} left
+              </span>
+
+              {isGenerating ? (
+                <button
+                  onClick={onAbort}
+                  className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canGenerate}
+                  className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 ${canGenerate
+                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white hover:scale-105 shadow-lg'
+                    : 'bg-white/10 text-white/50 cursor-not-allowed'
+                    }`}
+                >
+                  <Wand2 className="w-5 h-5" />
+                  <span>Generate</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Help Text */}
+          {!canGenerate && !isGenerating && (
+            <div className="mt-4 text-center text-white/50 text-sm">
+              {!uploadedImage && !prompt.trim() && "Upload an image and describe your vision to get started"}
+              {!uploadedImage && prompt.trim() && "Please upload an image to continue"}
+              {uploadedImage && !prompt.trim() && "Describe how you want to transform your image"}
+            </div>
+          )}
         </div>
       </div>
     </ScaleIn>
@@ -207,11 +375,8 @@ const mockGenerateAPI = async (imageUrl: string, prompt: string, style: string, 
   });
 };
 
-// Main App Component
+// Main App Component  
 const LovableAIStudio: React.FC = () => {
-  const [uploadedImage, setUploadedImage] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('editorial');
   const [generationState, setGenerationState] = useState<GenerationState>({
     isLoading: false,
     isAborted: false,
@@ -219,31 +384,11 @@ const LovableAIStudio: React.FC = () => {
     error: null
   });
   const [selectedResult, setSelectedResult] = useState<GenerationResult | null>(null);
-  const [showWorkspace, setShowWorkspace] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [history, setHistory] = useInMemoryHistory(5);
 
-  const handlePromptSubmit = async (promptText: string) => {
-    setPrompt(promptText);
-    setShowWorkspace(true);
-
-    if (!uploadedImage) {
-      setGenerationState({
-        isLoading: false,
-        isAborted: false,
-        retryCount: 0,
-        error: 'Please upload an image first'
-      });
-      return;
-    }
-
-    await handleGenerate(promptText);
-  };
-
-  const handleGenerate = async (promptText = prompt) => {
-    if (!uploadedImage || !promptText.trim()) return;
-
+  const handleGenerate = async (data: { prompt: string; image: string; style: string }) => {
     abortControllerRef.current = new AbortController();
     setGenerationState({
       isLoading: true,
@@ -257,7 +402,7 @@ const LovableAIStudio: React.FC = () => {
 
     const attemptGeneration = async (): Promise<void> => {
       try {
-        const result = await mockGenerateAPI(uploadedImage, promptText, selectedStyle, currentRetry);
+        const result = await mockGenerateAPI(data.image, data.prompt, data.style, currentRetry);
 
         if (!abortControllerRef.current?.signal.aborted) {
           const newHistory = [result, ...history];
@@ -303,15 +448,6 @@ const LovableAIStudio: React.FC = () => {
     setGenerationState(prev => ({ ...prev, isLoading: false, isAborted: true }));
   };
 
-  const loadHistoryItem = (item: GenerationResult) => {
-    setUploadedImage(item.originalImageUrl);
-    setPrompt(item.prompt);
-    setSelectedStyle(item.style);
-    setSelectedResult(item);
-  };
-
-  const canGenerate = Boolean(uploadedImage) && Boolean(prompt.trim()) && !generationState.isLoading;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Background Effects */}
@@ -324,111 +460,109 @@ const LovableAIStudio: React.FC = () => {
         <Navigation />
 
         <main className="container mx-auto px-6 py-16">
-          {!showWorkspace ? (
-            // Landing Page
-            <>
-              <div className="text-center mb-16 max-w-4xl mx-auto">
-                <FadeInUp>
-                  <h1 className="text-6xl md:text-7xl font-bold text-white mb-6">
-                    Build something{' '}
-                    <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                      Amazing
-                    </span>
-                  </h1>
-                </FadeInUp>
+          {/* Landing Page with All-in-One Interface */}
+          <div className="text-center mb-16 max-w-4xl mx-auto">
+            <FadeInUp>
+              <h1 className="text-6xl md:text-7xl font-bold text-white mb-6">
+                Build something{' '}
+                <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                  Amazing
+                </span>
+              </h1>
+            </FadeInUp>
 
-                <FadeInUp delay={200}>
-                  <p className="text-xl md:text-2xl text-white/70 mb-12">
-                    Create stunning AI-powered image transformations by chatting with our advanced AI
-                  </p>
-                </FadeInUp>
-              </div>
+            <FadeInUp delay={200}>
+              <p className="text-xl md:text-2xl text-white/70 mb-12">
+                Upload an image, describe your vision, and watch AI transform it into something extraordinary
+              </p>
+            </FadeInUp>
+          </div>
 
-              <ChatInterface onPromptSubmit={handlePromptSubmit} />
+          <ChatInterface
+            onGenerate={handleGenerate}
+            isGenerating={generationState.isLoading}
+            generationState={generationState}
+            onAbort={handleAbort}
+          />
 
-              {history.length > 0 && (
-                <div className="mt-16">
-                  <FadeInUp delay={600}>
-                    <h2 className="text-2xl font-bold text-white mb-8 text-center">Recent Creations</h2>
-                  </FadeInUp>
-                  <History
-                    history={history.slice(0, 6)}
-                    selectedHistoryItem={selectedResult}
-                    onLoadHistoryItem={(item) => {
-                      setSelectedResult(item);
-                      setShowWorkspace(true);
-                    }}
-                    isGridView={true}
-                  />
+          {/* Results Section */}
+          {selectedResult && (
+            <div className="mt-16 max-w-4xl mx-auto">
+              <FadeInUp delay={300}>
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-4">Your Creation</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+                      <h3 className="text-lg font-semibold text-white mb-4">Original</h3>
+                      <img
+                        src={selectedResult.originalImageUrl}
+                        alt="Original"
+                        className="w-full aspect-square object-cover rounded-xl shadow-lg"
+                      />
+                    </div>
+                    <div className="bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+                      <h3 className="text-lg font-semibold text-white mb-4">Generated</h3>
+                      <img
+                        src={selectedResult.imageUrl}
+                        alt="Generated"
+                        className="w-full aspect-square object-cover rounded-xl shadow-lg"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
+                    <p className="text-white/80 italic">"{selectedResult.prompt}"</p>
+                    <div className="flex items-center justify-center gap-4 mt-2">
+                      <span className="text-purple-400 text-sm">Style: {selectedResult.style}</span>
+                      <span className="text-white/60 text-sm">
+                        {new Date(selectedResult.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </>
-          ) : (
-            // Workspace View
-            <>
-              <div className="flex items-center justify-between mb-8">
-                <FadeInUp>
-                  <button
-                    onClick={() => setShowWorkspace(false)}
-                    className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
-                  >
-                    ← Back to Studio
-                  </button>
-                </FadeInUp>
+              </FadeInUp>
+            </div>
+          )}
 
-                {generationState.isLoading && (
-                  <FadeInUp>
-                    <button
-                      onClick={handleAbort}
-                      className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center gap-2"
+          {/* History Grid */}
+          {history.length > 0 && (
+            <div className="mt-16">
+              <FadeInUp delay={600}>
+                <h2 className="text-2xl font-bold text-white mb-8 text-center">Recent Creations</h2>
+              </FadeInUp>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                {history.slice(0, 6).map((item, index) => (
+                  <FadeInUp key={item.id} delay={index * 100}>
+                    <div
+                      onClick={() => setSelectedResult(item)}
+                      className={`group backdrop-blur-xl bg-black/20 border border-white/20 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:bg-black/30 hover:scale-105 hover:border-white/30 ${selectedResult?.id === item.id ? 'ring-2 ring-orange-500 bg-black/40' : ''
+                        }`}
                     >
-                      <X className="w-5 h-5" />
-                      Cancel Generation
-                    </button>
+                      <div className="aspect-square bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl overflow-hidden mb-4 shadow-inner">
+                        <img
+                          src={item.imageUrl}
+                          alt="Generated artwork"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-white font-medium truncate">
+                          {item.prompt.substring(0, 60)}{item.prompt.length > 60 ? '...' : ''}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-orange-400 text-sm font-medium capitalize">
+                            {item.style}
+                          </span>
+                          <span className="text-white/60 text-sm">
+                            {new Date(item.createdAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </FadeInUp>
-                )}
+                ))}
               </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                <div className="xl:col-span-3 space-y-8">
-                  <UploadSection
-                    uploadedImage={uploadedImage}
-                    onImageUpload={setUploadedImage}
-                  />
-
-                  <PromptSection
-                    prompt={prompt}
-                    onPromptChange={setPrompt}
-                  />
-
-                  <StyleSection
-                    selectedStyle={selectedStyle}
-                    onStyleChange={setSelectedStyle}
-                  />
-
-                  <PreviewSection
-                    uploadedImage={uploadedImage}
-                    prompt={prompt}
-                    selectedStyle={selectedStyle}
-                    selectedHistoryItem={selectedResult}
-                  />
-
-                  <GenerateSection
-                    canGenerate={canGenerate}
-                    generationState={generationState}
-                    onGenerate={() => handleGenerate()}
-                    onAbort={handleAbort}
-                  />
-                </div>
-
-                <History
-                  history={history}
-                  selectedHistoryItem={selectedResult}
-                  onLoadHistoryItem={loadHistoryItem}
-                  isGridView={false}
-                />
-              </div>
-            </>
+            </div>
           )}
         </main>
       </div>
