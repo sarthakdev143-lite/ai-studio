@@ -510,7 +510,7 @@ const LovableAIStudio: React.FC = () => {
                     </div>
                   </div>
                   <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
-                    <p className="text-white/80 italic">"{selectedResult.prompt}"</p>
+                    <p className="text-white/80 italic">&quot;{selectedResult.prompt}&quot;</p>
                     <div className="flex items-center justify-center gap-4 mt-2">
                       <span className="text-purple-400 text-sm">Style: {selectedResult.style}</span>
                       <span className="text-white/60 text-sm">
