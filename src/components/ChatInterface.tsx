@@ -245,7 +245,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
 
                             {/* Character Counter */}
                             {prompt.length > 0 && (
-                                <div className="absolute -bottom-3 right-2 text-xs text-white/60">
+                                <div className="absolute -bottom-2.5 right-2 text-xs text-white/60">
                                     {prompt.length}/500
                                 </div>
                             )}
