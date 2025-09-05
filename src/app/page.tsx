@@ -123,6 +123,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const clearUploadedImage = () => {
+    setUploadedImage('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // reset file input
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim() && uploadedImage) {
@@ -179,15 +186,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
         >
           {/* Image Upload Section */}
           {uploadedImage && (
-            <div className="mb-4 relative group">
+            <div className="mb-4 bottom-full w-32 relative">
               <img
                 src={uploadedImage}
                 alt="Uploaded preview"
-                className="h-32 w-32 object-cover rounded-xl shadow-lg mx-auto"
+                className="object-cover rounded-xl shadow-lg mx-auto"
               />
               <button
-                onClick={() => setUploadedImage('')}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs transition-colors opacity-0 group-hover:opacity-100"
+                onClick={() => clearUploadedImage()}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 cursor-pointer rounded-full flex items-center justify-center text-white text-xs transition-colors opacity-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -257,8 +264,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
 
           {/* Bottom Controls */}
           <div className="flex items-center justify-between">
-            {/* Style Selector */}
-            <div className="mt-4 mb-4">
+            {/* Style Selector - Dropdown */}
+            <div className="relative">
+
+              {/* Dropdown Menu */}
+              {showStyleSelector && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowStyleSelector(false)}
+                  />
+                  {/* Dropdown Content */}
+                  <div className="absolute bottom-full left-0 mb-2 z-20 min-w-[200px] bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden">
+                    <div className="p-2">
+                      {STYLE_OPTIONS_MINI.map((style) => (
+                        <button
+                          key={style.value}
+                          onClick={() => {
+                            setSelectedStyle(style.value);
+                            setShowStyleSelector(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${selectedStyle === style.value
+                            ? 'bg-orange-500 text-white'
+                            : 'hover:bg-white/10 text-white/80 hover:text-white'
+                            }`}
+                        >
+                          <span className="text-base">{style.emoji}</span>
+                          <span className="flex-1 text-left">{style.label}</span>
+                          {selectedStyle === style.value && (
+                            <div className="w-2 h-2 bg-white rounded-full" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
               <button
                 onClick={() => setShowStyleSelector(!showStyleSelector)}
                 className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
@@ -267,29 +309,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onGenerate, isGenerating,
                   {STYLE_OPTIONS_MINI.find(s => s.value === selectedStyle)?.emoji}
                 </span>
                 <span>{STYLE_OPTIONS_MINI.find(s => s.value === selectedStyle)?.label} Style</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${showStyleSelector ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${showStyleSelector ? '' : 'rotate-180'}`} />
               </button>
-
-              {showStyleSelector && (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 p-4 bg-black/20 rounded-xl border border-white/10">
-                  {STYLE_OPTIONS_MINI.map((style) => (
-                    <button
-                      key={style.value}
-                      onClick={() => {
-                        setSelectedStyle(style.value);
-                        setShowStyleSelector(false);
-                      }}
-                      className={`p-3 rounded-lg text-sm transition-all duration-200 ${selectedStyle === style.value
-                        ? 'bg-orange-500 text-white scale-105'
-                        : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white'
-                        }`}
-                    >
-                      <div className="text-lg mb-1">{style.emoji}</div>
-                      {style.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="flex items-center gap-3">
