@@ -1,4 +1,4 @@
-# 🎨 Lovable AI Studio
+# 🎨 AI Studio
 
 A small React + TypeScript web app that simulates a simplified AI design studio.  
 Built as part of the **Senior Front-End Engineer coding assignment** for Modelia.
